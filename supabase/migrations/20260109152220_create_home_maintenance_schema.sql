@@ -1,5 +1,5 @@
 /*
-  # Home Life Notes - Complete Database Schema
+  # House Life Notes - Complete Database Schema
 
   ## Overview
   This migration creates a comprehensive database schema for tracking home maintenance,
