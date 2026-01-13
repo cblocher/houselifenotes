@@ -124,12 +124,6 @@ export function AuthForm() {
               <Home className="w-8 h-8 text-white" />
             </div>
           </div>
-  const getSubtitle = () => {
-    if (isForgotPassword) return 'Enter your email to receive a password reset link';
-    if (isSignUp) return 'Create your account to get started';
-    return 'Your home’s story, organized';
-  };
-
  
           <h1 className="text-3xl font-bold text-center text-slate-800 mb-2">
             {isForgotPassword ? 'Reset Password' : 'House Life Notes'}
