@@ -110,7 +110,7 @@ export function Dashboard() {
               <div className="bg-emerald-500 p-2 rounded-lg">
                 <Home className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-slate-800">Home Life Notes</span>
+              <span className="text-xl font-bold text-slate-800">House Life Notes</span>
             </div>
 
             <button
