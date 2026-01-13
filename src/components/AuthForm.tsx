@@ -77,7 +77,7 @@ export function AuthForm() {
   const getSubtitle = () => {
     if (isForgotPassword) return 'Enter your email to receive a password reset link';
     if (isSignUp) return 'Create your account to get started';
-    return 'Your home’s story, organized.';
+    return 'Your home’s story, organized';
   };
 
   if (resetEmailSent) {
