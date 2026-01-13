@@ -1,2 +1,3 @@
 # README
-My experiment using Bolt!
+
+This app helps single-family homeowners track information about their house over time. 
