@@ -113,7 +113,7 @@ export function CostDashboard({ houseId }: CostDashboardProps) {
       <div className="p-6 max-w-6xl mx-auto">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
           <Home className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome to Home Life Notes</h2>
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome to House Life Notes</h2>
           <p className="text-slate-600 mb-6">
             Start by adding your house details to begin tracking your home maintenance and costs.
           </p>
