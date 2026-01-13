@@ -126,7 +126,7 @@ export function AuthForm() {
           </div>
 
           <h1 className="text-3xl font-bold text-center text-slate-800 mb-2">
-            {isForgotPassword ? 'Reset Password' : 'Home Life Notes'}
+            {isForgotPassword ? 'Reset Password' : 'House Life Notes'}
           </h1>
           <p className="text-center text-slate-600 mb-8">
             {getSubtitle()}
