@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { formatCurrency, type Country } from '../lib/currency';
+import { formatCurrency } from '../lib/currency';
 import { Plus, Trash2, Edit2, Building2, X } from 'lucide-react';
 import { DeleteConfirmationModal, shouldShowDeleteConfirmation } from './DeleteConfirmationModal';
+import { useHouse } from '../hooks/useHouse';
+import { useDeleteConfirmation } from '../hooks/useDeleteConfirmation';
+import { FormField, Input, Select, TextArea } from './ui/FormElements';
 
 interface ExteriorManagementProps {
   houseId: string;
@@ -36,50 +39,26 @@ export function ExteriorManagement({ houseId, onHasUnsavedChanges }: ExteriorMan
   const [editingFeature, setEditingFeature] = useState<string | null>(null);
   const [newFeature, setNewFeature] = useState<Partial<ExteriorFeature>>({ build_cost: 0 });
   const [newMaintenance, setNewMaintenance] = useState<Partial<ExteriorMaintenance>>({ cost: 0 });
-  const [country, setCountry] = useState<Country | null>(null);
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{
-    isOpen: boolean;
-    type: 'feature' | 'maintenance' | null;
-    id: string | null;
-    itemName: string;
-  }>({ isOpen: false, type: null, id: null, itemName: '' });
+  const { country } = useHouse(houseId);
+  const { deleteConfirmation, openDeleteConfirmation, closeDeleteConfirmation } = useDeleteConfirmation();
 
   useEffect(() => {
     loadData();
-    loadHouseCountry();
   }, [houseId]);
 
   useEffect(() => {
-    const hasUnsavedFeature = showFeatureForm && (
+    const hasUnsavedFeature = showFeatureForm && !!(
       newFeature.feature_type ||
       newFeature.description ||
       newFeature.size
     );
-    const hasUnsavedMaintenance = showMaintenanceForm && (
+    const hasUnsavedMaintenance = showMaintenanceForm && !!(
       newMaintenance.maintenance_type ||
       newMaintenance.description ||
       newMaintenance.maintenance_date
     );
     onHasUnsavedChanges?.(hasUnsavedFeature || hasUnsavedMaintenance);
   }, [showFeatureForm, newFeature, showMaintenanceForm, newMaintenance]);
-
-  const loadHouseCountry = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('houses')
-        .select('country')
-        .eq('id', houseId)
-        .is('deleted_at', null)
-        .maybeSingle();
-
-      if (error) throw error;
-      if (data) {
-        setCountry(data.country);
-      }
-    } catch (error) {
-      console.error('Error loading house country:', error);
-    }
-  };
 
   const loadData = async () => {
     try {
@@ -137,12 +116,7 @@ export function ExteriorManagement({ houseId, onHasUnsavedChanges }: ExteriorMan
   const handleDeleteFeatureClick = (feature: ExteriorFeature) => {
     if (shouldShowDeleteConfirmation()) {
       const itemName = `${feature.feature_type}${feature.description ? ` - ${feature.description}` : ''}`;
-      setDeleteConfirmation({
-        isOpen: true,
-        type: 'feature',
-        id: feature.id,
-        itemName
-      });
+      openDeleteConfirmation('feature', feature.id, itemName);
     } else {
       deleteFeature(feature.id);
     }
@@ -189,12 +163,7 @@ export function ExteriorManagement({ houseId, onHasUnsavedChanges }: ExteriorMan
   const handleDeleteMaintenanceClick = (record: ExteriorMaintenance) => {
     if (shouldShowDeleteConfirmation()) {
       const itemName = `${record.maintenance_type}${record.description ? ` - ${record.description}` : ''}`;
-      setDeleteConfirmation({
-        isOpen: true,
-        type: 'maintenance',
-        id: record.id,
-        itemName
-      });
+      openDeleteConfirmation('maintenance', record.id, itemName);
     } else {
       deleteMaintenance(record.id);
     }
@@ -270,74 +239,62 @@ export function ExteriorManagement({ houseId, onHasUnsavedChanges }: ExteriorMan
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Feature Type</label>
-                <select
+              <FormField label="Feature Type">
+                <Select
                   value={newFeature.feature_type || ''}
                   onChange={(e) => setNewFeature({ ...newFeature, feature_type: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="">Select type...</option>
                   {featureTypes.map((type) => (
                     <option key={type} value={type}>{type}</option>
                   ))}
-                </select>
-              </div>
+                </Select>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Size/Dimensions</label>
-                <input
+              <FormField label="Size/Dimensions">
+                <Input
                   type="text"
                   value={newFeature.size || ''}
                   onChange={(e) => setNewFeature({ ...newFeature, size: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="e.g., 20x10 ft, 500 sq ft"
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Build Cost</label>
-                <input
+              <FormField label="Build Cost">
+                <Input
                   type="number"
                   value={newFeature.build_cost || ''}
                   onChange={(e) => setNewFeature({ ...newFeature, build_cost: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="0.00"
                   step="0.01"
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Date Built</label>
-                <input
+              <FormField label="Date Built">
+                <Input
                   type="date"
                   value={newFeature.date_built || ''}
                   onChange={(e) => setNewFeature({ ...newFeature, date_built: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Builder Name</label>
-                <input
+              <FormField label="Builder Name">
+                <Input
                   type="text"
                   value={newFeature.builder_name || ''}
                   onChange={(e) => setNewFeature({ ...newFeature, builder_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="Company or person name"
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
-                <input
+              <FormField label="Description">
+                <Input
                   type="text"
                   value={newFeature.description || ''}
                   onChange={(e) => setNewFeature({ ...newFeature, description: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="Brief description"
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="flex justify-end space-x-3">
@@ -438,62 +395,54 @@ export function ExteriorManagement({ houseId, onHasUnsavedChanges }: ExteriorMan
             <h3 className="text-lg font-semibold text-slate-800 mb-4">Add Maintenance Record</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Maintenance Type</label>
-                <select
+              <FormField label="Maintenance Type">
+                <Select
                   value={newMaintenance.maintenance_type || ''}
                   onChange={(e) => setNewMaintenance({ ...newMaintenance, maintenance_type: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="">Select type...</option>
                   {maintenanceTypes.map((type) => (
                     <option key={type} value={type}>{type}</option>
                   ))}
-                </select>
-              </div>
+                </Select>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Date</label>
-                <input
+              <FormField label="Date">
+                <Input
                   type="date"
                   value={newMaintenance.maintenance_date || ''}
                   onChange={(e) => setNewMaintenance({ ...newMaintenance, maintenance_date: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Cost</label>
-                <input
+              <FormField label="Cost">
+                <Input
                   type="number"
                   value={newMaintenance.cost || ''}
                   onChange={(e) => setNewMaintenance({ ...newMaintenance, cost: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="0.00"
                   step="0.01"
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Contractor</label>
-                <input
+              <FormField label="Contractor">
+                <Input
                   type="text"
                   value={newMaintenance.contractor_name || ''}
                   onChange={(e) => setNewMaintenance({ ...newMaintenance, contractor_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="Company or person name"
                 />
-              </div>
+              </FormField>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
-                <textarea
-                  value={newMaintenance.description || ''}
-                  onChange={(e) => setNewMaintenance({ ...newMaintenance, description: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  rows={2}
-                  placeholder="Describe the work done..."
-                />
+                <FormField label="Description">
+                  <TextArea
+                    value={newMaintenance.description || ''}
+                    onChange={(e) => setNewMaintenance({ ...newMaintenance, description: e.target.value })}
+                    rows={2}
+                    placeholder="Describe the work done..."
+                  />
+                </FormField>
               </div>
             </div>
 
@@ -556,7 +505,7 @@ export function ExteriorManagement({ houseId, onHasUnsavedChanges }: ExteriorMan
 
       <DeleteConfirmationModal
         isOpen={deleteConfirmation.isOpen}
-        onClose={() => setDeleteConfirmation({ isOpen: false, type: null, id: null, itemName: '' })}
+        onClose={closeDeleteConfirmation}
         onConfirm={() => {
           if (deleteConfirmation.id && deleteConfirmation.type) {
             if (deleteConfirmation.type === 'feature') {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Lock, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { FormField, Input } from './ui/FormElements';
 
 interface AccountManagementProps {
   userEmail: string;
@@ -9,7 +10,6 @@ interface AccountManagementProps {
 }
 
 export function AccountManagement({ userEmail, onAccountDeleted, onHasUnsavedChanges }: AccountManagementProps) {
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -56,7 +56,6 @@ export function AccountManagement({ userEmail, onAccountDeleted, onHasUnsavedCha
       if (error) throw error;
 
       setPasswordSuccess('Changes saved');
-      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (error) {
@@ -105,12 +104,11 @@ export function AccountManagement({ userEmail, onAccountDeleted, onHasUnsavedCha
         </div>
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+          <FormField label="Email">
             <div className="px-4 py-3 bg-slate-50 rounded-lg text-slate-800 border border-slate-200">
               {userEmail}
             </div>
-          </div>
+          </FormField>
         </div>
       </div>
 
@@ -123,16 +121,13 @@ export function AccountManagement({ userEmail, onAccountDeleted, onHasUnsavedCha
         </div>
 
         <form onSubmit={handlePasswordChange} className="space-y-4">
-          <div>
-            <label htmlFor="new-password" className="block text-sm font-medium text-slate-700 mb-2">
-              New Password
-            </label>
-            <input
+          <FormField label="New Password">
+            <Input
               id="new-password"
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className="px-4 py-3 focus:ring-blue-500"
               placeholder="Enter new password"
             />
             {newPassword && (
@@ -155,18 +150,15 @@ export function AccountManagement({ userEmail, onAccountDeleted, onHasUnsavedCha
                 </div>
               </div>
             )}
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="confirm-password" className="block text-sm font-medium text-slate-700 mb-2">
-              Confirm New Password
-            </label>
-            <input
+          <FormField label="Confirm New Password">
+            <Input
               id="confirm-password"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className="px-4 py-3 focus:ring-blue-500"
               placeholder="Confirm new password"
             />
             {confirmPassword && (
@@ -181,7 +173,7 @@ export function AccountManagement({ userEmail, onAccountDeleted, onHasUnsavedCha
                 </div>
               </div>
             )}
-          </div>
+          </FormField>
 
           {passwordError && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
@@ -235,19 +227,16 @@ export function AccountManagement({ userEmail, onAccountDeleted, onHasUnsavedCha
             </button>
           ) : (
             <div className="space-y-4">
-              <div>
-                <label htmlFor="delete-confirm" className="block text-sm font-medium text-slate-700 mb-2">
-                  Type <span className="font-bold text-red-600">DELETE</span> to confirm
-                </label>
-                <input
+              <FormField label={<span>Type <span className="font-bold text-red-600">DELETE</span> to confirm</span>}>
+                <Input
                   id="delete-confirm"
                   type="text"
                   value={deleteConfirmText}
                   onChange={(e) => setDeleteConfirmText(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
+                  className="px-4 py-3 focus:ring-red-500"
                   placeholder="Type DELETE"
                 />
-              </div>
+              </FormField>
 
               {deleteError && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">

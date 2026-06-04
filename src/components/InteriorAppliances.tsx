@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { formatCurrency, type Country } from '../lib/currency';
+import { formatCurrency } from '../lib/currency';
 import { Plus, Trash2, Edit2, Wrench, X, ExternalLink, Paperclip } from 'lucide-react';
 import { FileUpload, UploadedFile } from './FileUpload';
 import { DeleteConfirmationModal, shouldShowDeleteConfirmation } from './DeleteConfirmationModal';
+import { useHouse } from '../hooks/useHouse';
+import { useDeleteConfirmation } from '../hooks/useDeleteConfirmation';
+import { FormField, Input, Select, TextArea } from './ui/FormElements';
 
 interface InteriorAppliancesProps {
   houseId: string;
@@ -59,52 +62,27 @@ export function InteriorAppliances({ houseId, onHasUnsavedChanges }: InteriorApp
     repair_cost: 0,
   });
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [country, setCountry] = useState<Country | null>(null);
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{
-    isOpen: boolean;
-    type: 'appliance' | 'attachment' | 'repair' | null;
-    id: string | null;
-    applianceId?: string;
-    itemName: string;
-  }>({ isOpen: false, type: null, id: null, itemName: '' });
+  const { country } = useHouse(houseId);
+  const { deleteConfirmation, openDeleteConfirmation, closeDeleteConfirmation } = useDeleteConfirmation();
 
   useEffect(() => {
     loadAppliances();
-    loadHouseCountry();
   }, [houseId]);
 
   useEffect(() => {
-    const hasUnsavedAppliance = showAddForm && (
+    const hasUnsavedAppliance = showAddForm && !!(
       newAppliance.appliance_type ||
       newAppliance.brand ||
       newAppliance.model ||
       uploadedFiles.length > 0
     );
-    const hasUnsavedRepair = showRepairForm !== null && (
+    const hasUnsavedRepair = showRepairForm !== null && !!(
       newRepair.repair_date ||
       newRepair.description ||
       (newRepair.repair_cost && newRepair.repair_cost > 0)
     );
     onHasUnsavedChanges?.(hasUnsavedAppliance || hasUnsavedRepair);
   }, [showAddForm, newAppliance, uploadedFiles, showRepairForm, newRepair]);
-
-  const loadHouseCountry = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('houses')
-        .select('country')
-        .eq('id', houseId)
-        .is('deleted_at', null)
-        .maybeSingle();
-
-      if (error) throw error;
-      if (data) {
-        setCountry(data.country);
-      }
-    } catch (error) {
-      console.error('Error loading house country:', error);
-    }
-  };
 
   const loadAppliances = async () => {
     try {
@@ -220,12 +198,7 @@ export function InteriorAppliances({ houseId, onHasUnsavedChanges }: InteriorApp
   const handleDeleteApplianceClick = (appliance: Appliance) => {
     if (shouldShowDeleteConfirmation()) {
       const itemName = `${appliance.appliance_type}${appliance.brand ? ` (${appliance.brand})` : ''}`;
-      setDeleteConfirmation({
-        isOpen: true,
-        type: 'appliance',
-        id: appliance.id,
-        itemName
-      });
+      openDeleteConfirmation('appliance', appliance.id, itemName);
     } else {
       deleteAppliance(appliance.id);
     }
@@ -250,13 +223,7 @@ export function InteriorAppliances({ houseId, onHasUnsavedChanges }: InteriorApp
 
   const handleDeleteAttachmentClick = (attachment: Attachment, applianceId: string) => {
     if (shouldShowDeleteConfirmation()) {
-      setDeleteConfirmation({
-        isOpen: true,
-        type: 'attachment',
-        id: attachment.id,
-        applianceId,
-        itemName: attachment.file_name
-      });
+      openDeleteConfirmation('attachment', attachment.id, attachment.file_name, { applianceId });
     } else {
       deleteAttachment(attachment.id, applianceId);
     }
@@ -303,14 +270,8 @@ export function InteriorAppliances({ houseId, onHasUnsavedChanges }: InteriorApp
 
   const handleDeleteRepairClick = (repair: Repair, applianceId: string) => {
     if (shouldShowDeleteConfirmation()) {
-      const itemName = `${repair.repair_type || 'Repair'}${repair.repairman_name ? ` by ${repair.repairman_name}` : ''}`;
-      setDeleteConfirmation({
-        isOpen: true,
-        type: 'repair',
-        id: repair.id,
-        applianceId,
-        itemName
-      });
+      const itemName = `${repair.description || 'Repair'}${repair.technician_name ? ` by ${repair.technician_name}` : ''}`;
+      openDeleteConfirmation('repair', repair.id, itemName, { applianceId });
     } else {
       deleteRepair(repair.id, applianceId);
     }
@@ -373,139 +334,122 @@ export function InteriorAppliances({ houseId, onHasUnsavedChanges }: InteriorApp
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Appliance Type</label>
-              <select
+            <FormField label="Appliance Type">
+              <Select
                 value={newAppliance.appliance_type || ''}
                 onChange={(e) => setNewAppliance({ ...newAppliance, appliance_type: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               >
                 <option value="">Select type...</option>
                 {applianceTypes.map((type) => (
                   <option key={type} value={type}>{type}</option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Brand</label>
-              <input
+            <FormField label="Brand">
+              <Input
                 type="text"
                 value={newAppliance.brand || ''}
                 onChange={(e) => setNewAppliance({ ...newAppliance, brand: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="GE, Whirlpool, etc."
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Model</label>
-              <input
+            <FormField label="Model">
+              <Input
                 type="text"
                 value={newAppliance.model || ''}
                 onChange={(e) => setNewAppliance({ ...newAppliance, model: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="Model number"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Price Paid</label>
-              <input
+            <FormField label="Price Paid">
+              <Input
                 type="number"
                 value={newAppliance.purchase_cost || ''}
                 onChange={(e) => setNewAppliance({ ...newAppliance, purchase_cost: parseFloat(e.target.value) || 0 })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="0.00"
                 step="0.01"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Installation Cost</label>
-              <input
+            <FormField label="Installation Cost">
+              <Input
                 type="number"
                 value={newAppliance.installation_cost || ''}
                 onChange={(e) => setNewAppliance({ ...newAppliance, installation_cost: parseFloat(e.target.value) || 0 })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="0.00"
                 step="0.01"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Date Purchased</label>
-              <input
+            <FormField label="Date Purchased">
+              <Input
                 type="date"
                 value={newAppliance.date_purchased || ''}
                 onChange={(e) => setNewAppliance({ ...newAppliance, date_purchased: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Date Installed</label>
-              <input
+            <FormField label="Date Installed">
+              <Input
                 type="date"
                 value={newAppliance.date_installed || ''}
                 onChange={(e) => setNewAppliance({ ...newAppliance, date_installed: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Installer Name</label>
-              <input
+            <FormField label="Installer Name">
+              <Input
                 type="text"
                 value={newAppliance.installer_name || ''}
                 onChange={(e) => setNewAppliance({ ...newAppliance, installer_name: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="Company or person name"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Purchase Location</label>
-              <input
+            <FormField label="Purchase Location">
+              <Input
                 type="text"
                 value={newAppliance.purchase_location || ''}
                 onChange={(e) => setNewAppliance({ ...newAppliance, purchase_location: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="Store name or online retailer"
               />
+            </FormField>
+
+            <div className="md:col-span-2">
+              <FormField label="Support Link">
+                <Input
+                  type="url"
+                  value={newAppliance.support_link || ''}
+                  onChange={(e) => setNewAppliance({ ...newAppliance, support_link: e.target.value })}
+                  placeholder="https://support.manufacturer.com"
+                />
+              </FormField>
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Support Link</label>
-              <input
-                type="url"
-                value={newAppliance.support_link || ''}
-                onChange={(e) => setNewAppliance({ ...newAppliance, support_link: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                placeholder="https://support.manufacturer.com"
-              />
+              <FormField label="Notes">
+                <TextArea
+                  value={newAppliance.notes || ''}
+                  onChange={(e) => setNewAppliance({ ...newAppliance, notes: e.target.value })}
+                  rows={2}
+                  placeholder="Additional notes..."
+                />
+              </FormField>
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Notes</label>
-              <textarea
-                value={newAppliance.notes || ''}
-                onChange={(e) => setNewAppliance({ ...newAppliance, notes: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                rows={2}
-                placeholder="Additional notes..."
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Attachments</label>
-              <FileUpload
-                onFilesSelected={(files) => setUploadedFiles([...uploadedFiles, ...files])}
-                existingFiles={uploadedFiles}
-                onRemoveFile={(index) => setUploadedFiles(uploadedFiles.filter((_, i) => i !== index))}
-                maxFiles={10}
-                maxSizeMB={5}
-              />
+              <FormField label="Attachments">
+                <FileUpload
+                  onFilesSelected={(files) => setUploadedFiles([...uploadedFiles, ...files])}
+                  existingFiles={uploadedFiles}
+                  onRemoveFile={(index) => setUploadedFiles(uploadedFiles.filter((_, i) => i !== index))}
+                  maxFiles={10}
+                  maxSizeMB={5}
+                />
+              </FormField>
             </div>
           </div>
 
@@ -659,46 +603,42 @@ export function InteriorAppliances({ houseId, onHasUnsavedChanges }: InteriorApp
               {showRepairForm === appliance.id && (
                 <div className="bg-slate-50 rounded-lg p-4 mb-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Repair Date</label>
-                      <input
+                    <FormField label="Repair Date">
+                      <Input
                         type="date"
                         value={newRepair.repair_date || ''}
                         onChange={(e) => setNewRepair({ ...newRepair, repair_date: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        className="text-sm"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Cost</label>
-                      <input
+                    </FormField>
+                    <FormField label="Cost">
+                      <Input
                         type="number"
                         value={newRepair.repair_cost || ''}
                         onChange={(e) => setNewRepair({ ...newRepair, repair_cost: parseFloat(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        className="text-sm"
                         placeholder="0.00"
                         step="0.01"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Technician</label>
-                      <input
+                    </FormField>
+                    <FormField label="Technician">
+                      <Input
                         type="text"
                         value={newRepair.technician_name || ''}
                         onChange={(e) => setNewRepair({ ...newRepair, technician_name: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        className="text-sm"
                         placeholder="Who did the work"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Description</label>
-                      <input
+                    </FormField>
+                    <FormField label="Description">
+                      <Input
                         type="text"
                         value={newRepair.description || ''}
                         onChange={(e) => setNewRepair({ ...newRepair, description: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        className="text-sm"
                         placeholder="What was repaired"
                       />
-                    </div>
+                    </FormField>
                   </div>
                   <div className="flex justify-end space-x-2">
                     <button
@@ -760,15 +700,16 @@ export function InteriorAppliances({ houseId, onHasUnsavedChanges }: InteriorApp
 
       <DeleteConfirmationModal
         isOpen={deleteConfirmation.isOpen}
-        onClose={() => setDeleteConfirmation({ isOpen: false, type: null, id: null, itemName: '' })}
+        onClose={closeDeleteConfirmation}
         onConfirm={() => {
           if (deleteConfirmation.id && deleteConfirmation.type) {
+            const extraData = deleteConfirmation.extraData as Record<string, string> | undefined;
             if (deleteConfirmation.type === 'appliance') {
               deleteAppliance(deleteConfirmation.id);
-            } else if (deleteConfirmation.type === 'attachment' && deleteConfirmation.applianceId) {
-              deleteAttachment(deleteConfirmation.id, deleteConfirmation.applianceId);
-            } else if (deleteConfirmation.type === 'repair' && deleteConfirmation.applianceId) {
-              deleteRepair(deleteConfirmation.id, deleteConfirmation.applianceId);
+            } else if (deleteConfirmation.type === 'attachment' && extraData?.applianceId) {
+              deleteAttachment(deleteConfirmation.id, extraData.applianceId);
+            } else if (deleteConfirmation.type === 'repair' && extraData?.applianceId) {
+              deleteRepair(deleteConfirmation.id, extraData.applianceId);
             }
           }
         }}

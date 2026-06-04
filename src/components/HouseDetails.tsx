@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Save, Plus, Trash2, CreditCard as Edit2, X, Check } from 'lucide-react';
 import { DeleteConfirmationModal, shouldShowDeleteConfirmation } from './DeleteConfirmationModal';
+import { useDeleteConfirmation } from '../hooks/useDeleteConfirmation';
+import { FormField, Input, Select, TextArea } from './ui/FormElements';
 
 interface HouseDetailsProps {
   houseId: string | null;
@@ -72,7 +74,7 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
   const [newRoom, setNewRoom] = useState({ room_type: '', room_type_other: '', count: 1, notes: '', basement_details: null as Room['basement_details'], garage_details: null as Room['garage_details'] });
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [editedRoom, setEditedRoom] = useState<Partial<Room>>({});
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; roomId: string | null; roomName: string }>({ isOpen: false, roomId: null, roomName: '' });
+  const { deleteConfirmation, openDeleteConfirmation, closeDeleteConfirmation } = useDeleteConfirmation();
 
   const initialHouse = useRef<Partial<House>>({ country: 'United States' });
   const initialPropertyDetails = useRef<Partial<PropertyDetails>>({ sewage_type: 'municipal' });
@@ -257,7 +259,7 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
       const roomName = room.room_type === 'Other' && room.room_type_other
         ? room.room_type_other
         : room.room_type;
-      setDeleteConfirmation({ isOpen: true, roomId: room.id, roomName });
+      openDeleteConfirmation('room', room.id, roomName);
     } else {
       deleteRoom(room.id);
     }
@@ -319,33 +321,29 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
           <h3 className="text-sm font-semibold text-slate-700 mb-4 uppercase tracking-wide">Location</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Street Address</label>
-              <input
-                type="text"
-                value={house.address_line1 || ''}
-                onChange={(e) => setHouse({ ...house, address_line1: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                placeholder="123 Main Street"
-              />
+              <FormField label="Street Address">
+                <Input
+                  type="text"
+                  value={house.address_line1 || ''}
+                  onChange={(e) => setHouse({ ...house, address_line1: e.target.value })}
+                  placeholder="123 Main Street"
+                />
+              </FormField>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">City</label>
-              <input
+            <FormField label="City">
+              <Input
                 type="text"
                 value={house.city || ''}
                 onChange={(e) => setHouse({ ...house, city: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="Springfield"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">State</label>
-              <select
+            <FormField label="State">
+              <Select
                 value={house.state_province || ''}
                 onChange={(e) => setHouse({ ...house, state_province: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               >
                 <option value="">Select state...</option>
                 <option value="AL">Alabama</option>
@@ -404,146 +402,128 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
                 <option value="MP">Northern Mariana Islands</option>
                 <option value="PR">Puerto Rico</option>
                 <option value="VI">U.S. Virgin Islands</option>
-              </select>
-            </div>
+              </Select>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">ZIP Code</label>
-              <input
+            <FormField label="ZIP Code">
+              <Input
                 type="text"
                 value={house.postal_code || ''}
                 onChange={(e) => setHouse({ ...house, postal_code: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="12345"
                 maxLength={10}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Country</label>
-              <select
+            <FormField label="Country">
+              <Select
                 value={house.country || 'United States'}
                 onChange={(e) => setHouse({ ...house, country: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               >
                 <option value="United States">United States</option>
                 <option value="Canada">Canada</option>
                 <option value="Mexico">Mexico</option>
                 <option value="United Kingdom">United Kingdom</option>
                 <option value="Other">Other</option>
-              </select>
+              </Select>
               {house.country === 'Other' && (
-                <input
+                <Input
                   type="text"
                   value={house.country_other || ''}
                   onChange={(e) => setHouse({ ...house, country_other: e.target.value })}
                   placeholder="Please specify..."
-                  className="mt-2 w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="mt-2"
                 />
               )}
-            </div>
+            </FormField>
           </div>
         </div>
 
         <div>
           <h3 className="text-sm font-semibold text-slate-700 mb-4 uppercase tracking-wide">Property Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Year Built</label>
-              <input
+            <FormField label="Year Built">
+              <Input
                 type="number"
                 value={house.year_built ?? ''}
                 onChange={(e) => {
                   const value = e.target.value === '' ? null : parseInt(e.target.value);
                   setHouse({ ...house, year_built: isNaN(value as number) ? null : value });
                 }}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="2020"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Year Bought</label>
-              <input
+            <FormField label="Year Bought">
+              <Input
                 type="number"
                 value={house.year_bought ?? ''}
                 onChange={(e) => {
                   const value = e.target.value === '' ? null : parseInt(e.target.value);
                   setHouse({ ...house, year_bought: isNaN(value as number) ? null : value });
                 }}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="2021"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Square Footage</label>
-              <input
+            <FormField label="Square Footage">
+              <Input
                 type="number"
                 value={house.square_footage ?? ''}
                 onChange={(e) => {
                   const value = e.target.value === '' ? null : parseInt(e.target.value);
                   setHouse({ ...house, square_footage: isNaN(value as number) ? null : value });
                 }}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="2500"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Realtor Name</label>
-              <input
+            <FormField label="Realtor Name">
+              <Input
                 type="text"
                 value={house.realtor_name || ''}
                 onChange={(e) => setHouse({ ...house, realtor_name: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="Jane Smith"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Price Paid</label>
-              <input
+            <FormField label="Price Paid">
+              <Input
                 type="number"
                 value={house.price_paid ?? ''}
                 onChange={(e) => {
                   const value = e.target.value === '' ? null : parseFloat(e.target.value);
                   setHouse({ ...house, price_paid: isNaN(value as number) ? null : value });
                 }}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="350000"
                 step="0.01"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Year Sold (optional)</label>
-              <input
+            <FormField label="Year Sold (optional)">
+              <Input
                 type="number"
                 value={house.year_sold ?? ''}
                 onChange={(e) => {
                   const value = e.target.value === '' ? null : parseInt(e.target.value);
                   setHouse({ ...house, year_sold: isNaN(value as number) ? null : value });
                 }}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="2030"
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Price Sold (optional)</label>
-              <input
+            <FormField label="Price Sold (optional)">
+              <Input
                 type="number"
                 value={house.price_sold ?? ''}
                 onChange={(e) => {
                   const value = e.target.value === '' ? null : parseFloat(e.target.value);
                   setHouse({ ...house, price_sold: isNaN(value as number) ? null : value });
                 }}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="450000"
                 step="0.01"
               />
-            </div>
+            </FormField>
           </div>
         </div>
 
@@ -570,9 +550,8 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
             <h2 className="text-xl font-semibold text-slate-800 mb-4">Property Details</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Acreage</label>
-                <input
+              <FormField label="Acreage">
+                <Input
                   type="number"
                   step="0.01"
                   value={propertyDetails.acreage ?? ''}
@@ -580,65 +559,56 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
                     const value = e.target.value === '' ? null : parseFloat(e.target.value);
                     setPropertyDetails({ ...propertyDetails, acreage: isNaN(value as number) ? null : value });
                   }}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="0.25"
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Sewage Type</label>
-                <select
+              <FormField label="Sewage Type">
+                <Select
                   value={propertyDetails.sewage_type || 'municipal'}
                   onChange={(e) => setPropertyDetails({ ...propertyDetails, sewage_type: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="municipal">Municipal</option>
                   <option value="septic">Septic</option>
                   <option value="gray_water">Gray Water</option>
                   <option value="Other">Other</option>
-                </select>
+                </Select>
                 {propertyDetails.sewage_type === 'Other' && (
-                  <input
+                  <Input
                     type="text"
                     value={propertyDetails.sewage_type_other || ''}
                     onChange={(e) => setPropertyDetails({ ...propertyDetails, sewage_type_other: e.target.value })}
                     placeholder="Please specify..."
-                    className="mt-2 w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="mt-2"
                   />
                 )}
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  {propertyDetails.story === '2' || propertyDetails.story === 'Other' ? 'Stories' : 'Story'}
-                </label>
-                <select
+              <FormField label={propertyDetails.story === '2' || propertyDetails.story === 'Other' ? 'Stories' : 'Story'}>
+                <Select
                   value={propertyDetails.story || ''}
                   onChange={(e) => setPropertyDetails({ ...propertyDetails, story: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="">Select...</option>
                   <option value="1">1</option>
                   <option value="2">2</option>
                   <option value="Other">Other</option>
-                </select>
+                </Select>
                 {propertyDetails.story === 'Other' && (
-                  <input
+                  <Input
                     type="text"
                     value={propertyDetails.story_other || ''}
                     onChange={(e) => setPropertyDetails({ ...propertyDetails, story_other: e.target.value })}
                     placeholder="Please specify..."
-                    className="mt-2 w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="mt-2"
                   />
                 )}
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Build Style</label>
-                <select
+              <FormField label="Build Style">
+                <Select
                   value={propertyDetails.build_style || ''}
                   onChange={(e) => setPropertyDetails({ ...propertyDetails, build_style: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="">Select...</option>
                   <option value="Colonial">Colonial</option>
@@ -651,24 +621,22 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
                   <option value="Tudor">Tudor</option>
                   <option value="Victorian">Victorian</option>
                   <option value="Other">Other</option>
-                </select>
+                </Select>
                 {propertyDetails.build_style === 'Other' && (
-                  <input
+                  <Input
                     type="text"
                     value={propertyDetails.build_style_other || ''}
                     onChange={(e) => setPropertyDetails({ ...propertyDetails, build_style_other: e.target.value })}
                     placeholder="Please specify..."
-                    className="mt-2 w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="mt-2"
                   />
                 )}
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Exterior Finish</label>
-                <select
+              <FormField label="Exterior Finish">
+                <Select
                   value={propertyDetails.color_type || ''}
                   onChange={(e) => setPropertyDetails({ ...propertyDetails, color_type: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="">Select...</option>
                   <option value="Siding">Siding</option>
@@ -676,37 +644,36 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
                   <option value="Brick">Brick</option>
                   <option value="Shingle">Shingle</option>
                   <option value="Other">Other</option>
-                </select>
+                </Select>
                 {propertyDetails.color_type === 'Other' && (
-                  <input
+                  <Input
                     type="text"
                     value={propertyDetails.color_type_other || ''}
                     onChange={(e) => setPropertyDetails({ ...propertyDetails, color_type_other: e.target.value })}
                     placeholder="Please specify..."
-                    className="mt-2 w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="mt-2"
                   />
                 )}
-              </div>
+              </FormField>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">House Color</label>
-                <input
+              <FormField label="House Color">
+                <Input
                   type="color"
                   value={propertyDetails.house_color || '#ffffff'}
                   onChange={(e) => setPropertyDetails({ ...propertyDetails, house_color: e.target.value })}
-                  className="w-full h-12 px-2 py-1 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent cursor-pointer"
+                  className="h-12 px-2 py-1 cursor-pointer"
                 />
-              </div>
+              </FormField>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Lot Description</label>
-                <textarea
-                  value={propertyDetails.lot_description || ''}
-                  onChange={(e) => setPropertyDetails({ ...propertyDetails, lot_description: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="Describe your property..."
-                />
+                <FormField label="Lot Description">
+                  <TextArea
+                    value={propertyDetails.lot_description || ''}
+                    onChange={(e) => setPropertyDetails({ ...propertyDetails, lot_description: e.target.value })}
+                    rows={3}
+                    placeholder="Describe your property..."
+                  />
+                </FormField>
               </div>
             </div>
 
@@ -736,12 +703,11 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
                   {editingRoomId === room.id ? (
                     <div className="space-y-3">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-slate-700 mb-1">Room Type</label>
-                          <select
+                        <FormField label="Room Type">
+                          <Select
                             value={editedRoom.room_type || ''}
                             onChange={(e) => setEditedRoom({ ...editedRoom, room_type: e.target.value })}
-                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            className="text-sm"
                           >
                             <option value="">Select room type...</option>
                             <option value="Bedroom">Bedroom</option>
@@ -763,20 +729,19 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
                             <option value="Pantry">Pantry</option>
                             <option value="Utility Room">Utility Room</option>
                             <option value="Other">Other</option>
-                          </select>
+                          </Select>
                           {editedRoom.room_type === 'Other' && (
-                            <input
+                            <Input
                               type="text"
                               value={editedRoom.room_type_other || ''}
                               onChange={(e) => setEditedRoom({ ...editedRoom, room_type_other: e.target.value })}
                               placeholder="Please specify..."
-                              className="mt-2 w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                              className="mt-2 text-sm"
                             />
                           )}
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-slate-700 mb-1">Count</label>
-                          <input
+                        </FormField>
+                        <FormField label="Count">
+                          <Input
                             type="number"
                             value={editedRoom.count || 1}
                             onChange={(e) => {
@@ -785,11 +750,11 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
                                 : parseInt(e.target.value) || 1;
                               setEditedRoom({ ...editedRoom, count: value });
                             }}
-                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            className="text-sm"
                             min={editedRoom.room_type === 'Bathroom' ? '0.5' : '1'}
                             step={editedRoom.room_type === 'Bathroom' ? '0.5' : '1'}
                           />
-                        </div>
+                        </FormField>
                         {editedRoom.room_type === 'Basement' && (
                           <div className="md:col-span-2">
                             <label className="block text-xs font-medium text-slate-700 mb-2">Basement Type</label>
@@ -910,14 +875,15 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
                           </div>
                         )}
                         <div className="md:col-span-2">
-                          <label className="block text-xs font-medium text-slate-700 mb-1">Notes</label>
-                          <input
-                            type="text"
-                            value={editedRoom.notes || ''}
-                            onChange={(e) => setEditedRoom({ ...editedRoom, notes: e.target.value })}
-                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                            placeholder="Optional notes..."
-                          />
+                          <FormField label="Notes">
+                            <Input
+                              type="text"
+                              value={editedRoom.notes || ''}
+                              onChange={(e) => setEditedRoom({ ...editedRoom, notes: e.target.value })}
+                              className="text-sm"
+                              placeholder="Optional notes..."
+                            />
+                          </FormField>
                         </div>
                       </div>
                       <div className="flex items-center justify-end gap-2">
@@ -1012,44 +978,40 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
 
             <div className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <select
-                    value={newRoom.room_type}
-                    onChange={(e) => setNewRoom({ ...newRoom, room_type: e.target.value, basement_details: null, garage_details: null })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  >
-                    <option value="">Select room type...</option>
-                    <option value="Bedroom">Bedroom</option>
-                    <option value="Bathroom">Bathroom</option>
-                    <option value="Kitchen">Kitchen</option>
-                    <option value="Living Room">Living Room</option>
-                    <option value="Dining Room">Dining Room</option>
-                    <option value="Family Room">Family Room</option>
-                    <option value="Office">Office</option>
-                    <option value="Den">Den</option>
-                    <option value="Laundry Room">Laundry Room</option>
-                    <option value="Garage">Garage</option>
-                    <option value="Basement">Basement</option>
-                    <option value="Attic">Attic</option>
-                    <option value="Sunroom">Sunroom</option>
-                    <option value="Bonus Room">Bonus Room</option>
-                    <option value="Mudroom">Mudroom</option>
-                    <option value="Walk-in Closet">Walk-in Closet</option>
-                    <option value="Pantry">Pantry</option>
-                    <option value="Utility Room">Utility Room</option>
-                    <option value="Other">Other</option>
-                  </select>
-                  {newRoom.room_type === 'Other' && (
-                    <input
-                      type="text"
-                      value={newRoom.room_type_other || ''}
-                      onChange={(e) => setNewRoom({ ...newRoom, room_type_other: e.target.value })}
-                      placeholder="Please specify..."
-                      className="mt-2 w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    />
-                  )}
-                </div>
-                <input
+                <Select
+                  value={newRoom.room_type}
+                  onChange={(e) => setNewRoom({ ...newRoom, room_type: e.target.value, basement_details: null, garage_details: null })}
+                >
+                  <option value="">Select room type...</option>
+                  <option value="Bedroom">Bedroom</option>
+                  <option value="Bathroom">Bathroom</option>
+                  <option value="Kitchen">Kitchen</option>
+                  <option value="Living Room">Living Room</option>
+                  <option value="Dining Room">Dining Room</option>
+                  <option value="Family Room">Family Room</option>
+                  <option value="Office">Office</option>
+                  <option value="Den">Den</option>
+                  <option value="Laundry Room">Laundry Room</option>
+                  <option value="Garage">Garage</option>
+                  <option value="Basement">Basement</option>
+                  <option value="Attic">Attic</option>
+                  <option value="Sunroom">Sunroom</option>
+                  <option value="Bonus Room">Bonus Room</option>
+                  <option value="Mudroom">Mudroom</option>
+                  <option value="Walk-in Closet">Walk-in Closet</option>
+                  <option value="Pantry">Pantry</option>
+                  <option value="Utility Room">Utility Room</option>
+                  <option value="Other">Other</option>
+                </Select>
+                {newRoom.room_type === 'Other' && (
+                  <Input
+                    type="text"
+                    value={newRoom.room_type_other || ''}
+                    onChange={(e) => setNewRoom({ ...newRoom, room_type_other: e.target.value })}
+                    placeholder="Please specify..."
+                  />
+                )}
+                <Input
                   type="number"
                   value={newRoom.count}
                   onChange={(e) => {
@@ -1058,7 +1020,6 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
                       : parseInt(e.target.value) || 1;
                     setNewRoom({ ...newRoom, count: value });
                   }}
-                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="Count"
                   min={newRoom.room_type === 'Bathroom' ? '0.5' : '1'}
                   step={newRoom.room_type === 'Bathroom' ? '0.5' : '1'}
@@ -1202,13 +1163,13 @@ export function HouseDetails({ houseId, onHouseCreated, onHasUnsavedChanges }: H
 
       <DeleteConfirmationModal
         isOpen={deleteConfirmation.isOpen}
-        onClose={() => setDeleteConfirmation({ isOpen: false, roomId: null, roomName: '' })}
+        onClose={closeDeleteConfirmation}
         onConfirm={() => {
-          if (deleteConfirmation.roomId) {
-            deleteRoom(deleteConfirmation.roomId);
+          if (deleteConfirmation.id) {
+            deleteRoom(deleteConfirmation.id);
           }
         }}
-        itemName={deleteConfirmation.roomName}
+        itemName={deleteConfirmation.itemName}
         itemType="room"
       />
     </div>
