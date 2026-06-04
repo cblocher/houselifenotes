@@ -140,7 +140,6 @@ The migrations in `supabase/migrations` should be applied in timestamp order:
     - Adds soft-delete, restore, and permanent-delete functions for `rooms`.
 
 > Note: the migration files are written sequentially, so apply them in filename order to keep the schema consistent.
-
 > Review the `delete_user_account` function against the current schema before using it in production. The function now deletes the authenticated user and relies on the current `houses` schema using `ON DELETE CASCADE` to remove related rows automatically.
 
 ## Quality checks
@@ -161,4 +160,3 @@ The migrations in `supabase/migrations` should be applied in timestamp order:
 
 - `package-lock.json` is already part of this repo, so using `npm` is the safest option for dependency consistency.
 - If you choose a different package manager like `pnpm` or `yarn`, the lockfile and install behavior may diverge, which can lead to inconsistent dependency resolution.
-
